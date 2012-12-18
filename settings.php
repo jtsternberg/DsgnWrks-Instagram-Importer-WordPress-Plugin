@@ -255,7 +255,7 @@ if ( !empty( $users ) && is_array( $users ) ) {
 
 								<tr valign="top">
 								<td colspan="2">
-									<p><strong>Post Content:</strong><br/>Add the imported Instagram data using these custom tags:<br/><code>**insta-text**</code>, <code>**insta-image**</code>, <code>**insta-image-link**</code>, <code>**insta-link**</code>, <code>**insta-location**</code>, <code>**insta-filter**</code></p>
+									<p><strong>Post Content:</strong><br/>Add the imported Instagram data using these custom tags:<br/><code>**insta-text**</code>, <code>**insta-image**</code>, <code>**insta-image-link**</code>, <code>**insta-link**</code>, <code>**insta-location**</code>, <code>**insta-filter**</code>, <code>**insta-likes**</code></p>
 									<?php
 									if ( isset( $opts[$id]['post_content'] ) ) {
 										$post_text = $opts[$id]['post_content'];

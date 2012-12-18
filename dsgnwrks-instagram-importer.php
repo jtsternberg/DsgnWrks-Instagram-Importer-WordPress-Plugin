@@ -248,6 +248,11 @@ function jts_instagram_img( $pics, $settings = array(), $tags='' ) {
 		$import['post_title'] = $insta_title;
 	}
 
+	$likes = '&hearts;&nbsp;' . count($pics->likes->data);
+	foreach ($pics->likes->data as $like) {
+		$likes = $likes .' <a href="http://instagram.com/'. $like->username .'">'. $like->username .'</a>';
+	}
+
 	$imgurl = $pics->images->standard_resolution->url;
 	$insta_url = esc_url( $pics->link );
 	$import['featured'] = isset( $settings['feat_image'] ) ? $settings['feat_image'] : true;
@@ -275,11 +280,10 @@ function jts_instagram_img( $pics, $settings = array(), $tags='' ) {
 	} else {
 		$content = $settings['post_content'];
 		$content = str_replace( '**insta-text**', $import['post_excerpt'], $content );
-		$content = str_replace( '**insta-image**', '<img src="'. $imgurl .'"/>', $content );
-		$content = str_replace( '**insta-image-link**', $imgurl, $content );
 		$content = str_replace( '**insta-link**', $insta_url, $content );
 		$content = str_replace( '**insta-location**', $loc, $content );
 		$content = str_replace( '**insta-filter**', $pics->filter, $content );
+		$content = str_replace( '**insta-likes**', $likes, $content );
 	}
 
 	$import['post_author'] = isset( $settings['author'] ) ? $settings['author'] : $user_ID;
@@ -304,6 +308,20 @@ function jts_instagram_img( $pics, $settings = array(), $tags='' ) {
 	$new_post_id = wp_insert_post( $post, true );
 
 	apply_filters( 'dsgnwrks_instagram_post_save', $new_post_id, $pics );
+
+	// Attach comments, if any
+	foreach ($pics->comments->data as $instagram_comment) {
+		$comment = array(
+			'comment_post_ID' => $new_post_id,
+			'comment_author' => $instagram_comment->from->username,
+			'comment_author_url' => 'http://instagram.com/'. $instagram_comment->from->username,
+			'comment_content' => $instagram_comment->text,
+			'comment_date' => date( 'Y-m-d H:i:s', $instagram_comment->created_time ),
+			'comment_approved' => 1,
+			'comment_type' => '',
+		);
+		wp_insert_comment( $comment );
+	}
 
 	$args = array(
 		'public' => true,
@@ -342,6 +360,8 @@ function jts_instagram_img( $pics, $settings = array(), $tags='' ) {
 
 function dsgnwrks_instagram_upload_img( $imgurl='', $post_id='', $title='', $featured = false ) {
 
+	$content = get_post_field('post_content', $post_id);
+
 	if ( !empty( $imgurl ) && $featured ) {
 		$tmp = download_url( $imgurl );
 
@@ -362,7 +382,24 @@ function dsgnwrks_instagram_upload_img( $imgurl='', $post_id='', $title='', $fea
 		}
 
 		set_post_thumbnail( $post_id, $img_id );
+
+		// Uploaded image, replace URLs in post
+		$uploaded_imgurl = wp_get_attachment_url( $img_id );
+		$uploaded_thumburl = wp_get_attachment_thumb_url( $img_id );
+		$content = str_replace( '**insta-image**', '<img src="'. $uploaded_thumburl .'"/>', $content );
+		$content = str_replace( '**insta-image-link**', $uploaded_imgurl, $content );
+	} else {
+		// No uploaded image, just hotlink
+		$content = str_replace( '**insta-image**', '<img src="'. $imgurl .'"/>', $content );
+		$content = str_replace( '**insta-image-link**', $imgurl, $content );
 	}
+
+	// Update the post with image URLs
+	$updated_post = array(
+		'ID' => $post_id,
+		'post_content' => $content,
+	);
+	wp_update_post( $updated_post );
 
 	return '<p><strong><em>&ldquo;'. $title .'&rdquo; </em> imported and created successfully.</strong></p>';
 }
