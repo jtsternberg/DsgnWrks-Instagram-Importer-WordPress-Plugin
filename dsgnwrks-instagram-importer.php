@@ -248,6 +248,11 @@ function jts_instagram_img( $pics, $settings = array(), $tags='' ) {
 		$import['post_title'] = $insta_title;
 	}
 
+	$likes = '&hearts;&nbsp;' . count($pics->likes->data);
+	foreach ($pics->likes->data as $like) {
+		$likes = $likes .' <a href="http://instagram.com/'. $like->username .'">'. $like->username .'</a>';
+	}
+
 	$imgurl = $pics->images->standard_resolution->url;
 	$insta_url = esc_url( $pics->link );
 	$import['featured'] = isset( $settings['feat_image'] ) ? $settings['feat_image'] : true;
@@ -278,6 +283,7 @@ function jts_instagram_img( $pics, $settings = array(), $tags='' ) {
 		$content = str_replace( '**insta-link**', $insta_url, $content );
 		$content = str_replace( '**insta-location**', $loc, $content );
 		$content = str_replace( '**insta-filter**', $pics->filter, $content );
+		$content = str_replace( '**insta-likes**', $likes, $content );
 	}
 
 	$import['post_author'] = isset( $settings['author'] ) ? $settings['author'] : $user_ID;
