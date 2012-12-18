@@ -275,8 +275,6 @@ function jts_instagram_img( $pics, $settings = array(), $tags='' ) {
 	} else {
 		$content = $settings['post_content'];
 		$content = str_replace( '**insta-text**', $import['post_excerpt'], $content );
-		$content = str_replace( '**insta-image**', '<img src="'. $imgurl .'"/>', $content );
-		$content = str_replace( '**insta-image-link**', $imgurl, $content );
 		$content = str_replace( '**insta-link**', $insta_url, $content );
 		$content = str_replace( '**insta-location**', $loc, $content );
 		$content = str_replace( '**insta-filter**', $pics->filter, $content );
@@ -342,6 +340,8 @@ function jts_instagram_img( $pics, $settings = array(), $tags='' ) {
 
 function dsgnwrks_instagram_upload_img( $imgurl='', $post_id='', $title='', $featured = false ) {
 
+	$content = get_post_field('post_content', $post_id);
+
 	if ( !empty( $imgurl ) && $featured ) {
 		$tmp = download_url( $imgurl );
 
@@ -362,7 +362,24 @@ function dsgnwrks_instagram_upload_img( $imgurl='', $post_id='', $title='', $fea
 		}
 
 		set_post_thumbnail( $post_id, $img_id );
+
+		// Uploaded image, replace URLs in post
+		$uploaded_imgurl = wp_get_attachment_url( $img_id );
+		$uploaded_thumburl = wp_get_attachment_thumb_url( $img_id );
+		$content = str_replace( '**insta-image**', '<img src="'. $uploaded_thumburl .'"/>', $content );
+		$content = str_replace( '**insta-image-link**', $uploaded_imgurl, $content );
+	} else {
+		// No uploaded image, just hotlink
+		$content = str_replace( '**insta-image**', '<img src="'. $imgurl .'"/>', $content );
+		$content = str_replace( '**insta-image-link**', $imgurl, $content );
 	}
+
+	// Update the post with image URLs
+	$updated_post = array(
+		'ID' => $post_id,
+		'post_content' => $content,
+	);
+	wp_update_post( $updated_post );
 
 	return '<p><strong><em>&ldquo;'. $title .'&rdquo; </em> imported and created successfully.</strong></p>';
 }
