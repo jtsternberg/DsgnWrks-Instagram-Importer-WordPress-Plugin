@@ -303,6 +303,20 @@ function jts_instagram_img( $pics, $settings = array(), $tags='' ) {
 
 	apply_filters( 'dsgnwrks_instagram_post_save', $new_post_id, $pics );
 
+	// Attach comments, if any
+	foreach ($pics->comments->data as $instagram_comment) {
+		$comment = array(
+			'comment_post_ID' => $new_post_id,
+			'comment_author' => $instagram_comment->from->username,
+			'comment_author_url' => 'http://instagram.com/'. $instagram_comment->from->username,
+			'comment_content' => $instagram_comment->text,
+			'comment_date' => date( 'Y-m-d H:i:s', $instagram_comment->created_time ),
+			'comment_approved' => 1,
+			'comment_type' => '',
+		);
+		wp_insert_comment( $comment );
+	}
+
 	$args = array(
 		'public' => true,
 		);
