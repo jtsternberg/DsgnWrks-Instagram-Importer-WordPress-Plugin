@@ -198,8 +198,16 @@ class DsgnWrksInstagram {
 	protected function import_messages( $api_url, $settings, $prevmessages = array() ) {
 
 		$this->settings = $settings;
-
-		$api = wp_remote_retrieve_body( wp_remote_get( $api_url ) );
+		
+		$response = wp_remote_get( $api_url, array('sslverify' => !(bool)$settings['ssl_verify_off']) );
+		
+		if (is_wp_error($response)) {
+			echo $response->get_error_message();
+			exit;
+		}
+		
+		$api = wp_remote_retrieve_body( $response );
+		
 		$data = json_decode( $api );
 
 		require_once(ABSPATH . 'wp-admin/includes/file.php');
@@ -289,6 +297,9 @@ class DsgnWrksInstagram {
 		$settings = ( empty( $settings ) ) ? get_option( 'dsgnwrks_insta_options' ) : $settings;
 
 		$loc = ( isset( $p->location->name ) ) ? $p->location->name : '';
+		$loc_longitude = ( isset( $p->location->longitude ) ) ? $p->location->longitude : '';
+		$loc_latitude = ( isset( $p->location->latitude ) ) ? $p->location->latitude : '';
+		
 
 		$insta_title = !empty( $p->caption->text ) ? $p->caption->text : 'Untitled';
 		$import['post_title'] = $insta_title;
@@ -376,6 +387,29 @@ class DsgnWrksInstagram {
 		update_post_meta( $new_post_id, 'instagram_filter_used', $p->filter );
 		update_post_meta( $new_post_id, 'instagram_location', $p->location );
 		update_post_meta( $new_post_id, 'instagram_link', esc_url( $p->link ) );
+		
+		// Geolocation
+		if (!empty($settings['geolocation'])) {
+			update_post_meta( $new_post_id, 'geo_latitude', $loc_latitude );
+			update_post_meta( $new_post_id, 'geo_longitude', $loc_longitude );
+			update_post_meta( $new_post_id, 'geo_address', $loc );
+			update_post_meta( $new_post_id, 'geo_public', true );
+		}
+
+		// Tags
+		if (!empty($settings['autotag']) && $settings['taxonomy_tag'] !== 'none') {
+			$tags = $p->tags;
+			
+			$tag_string = '';
+	
+			if (!empty($tags)) {
+				$tag_string .= implode(', ', $tags);
+			}
+					
+			if (!empty($tag_string) || $tag_string != ''){
+				wp_set_post_terms($new_post_id, $tag_string, $settings['taxonomy_tag'], true);
+			}
+		}
 
 		return $this->upload_img( $imgurl );
 	}
