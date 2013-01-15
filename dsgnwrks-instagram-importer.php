@@ -396,6 +396,21 @@ class DsgnWrksInstagram {
 			update_post_meta( $new_post_id, 'geo_public', true );
 		}
 
+		// Tags
+		if (!empty($settings['autotag']) && $settings['taxonomy_tag'] !== 'none') {
+			$tags = $p->tags;
+			
+			$tag_string = '';
+	
+			if (!empty($tags)) {
+				$tag_string .= implode(', ', $tags);
+			}
+					
+			if (!empty($tag_string) || $tag_string != ''){
+				wp_set_post_terms($new_post_id, $tag_string, $settings['taxonomy_tag'], true);
+			}
+		}
+
 		return $this->upload_img( $imgurl );
 	}
 

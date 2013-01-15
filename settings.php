@@ -396,6 +396,34 @@ if ( !empty( $users ) && is_array( $users ) ) {
 
 								?><tr valign="top">
 										<th scope="row">
+											<label for="dsgnwrks_insta_options[<?php echo $id; ?>][taxonomy_tag]"><strong>Taxonomy for tags</strong></label>
+										</th>
+										<td>
+											<?php 
+											$taxonomies = get_object_taxonomies(isset( $o['post-type'] ) ? $o['post-type'] : 'post','objects');
+											?>
+											<select id="dsgnwrks_insta_options[<?php echo $id; ?>][taxonomy_tag]" name="dsgnwrks_insta_options[<?php echo $id; ?>][taxonomy_tag]">
+												<option value="none">None</option>
+											<?php foreach ($taxonomies as $key => $tax):
+												
+												if($tax->hierarchical != 0 || $key == 'post_format' )
+													continue;
+											?>
+												<option value="<?php echo $key ?>" <?php selected($key, $o['taxonomy_tag']) ?>><?php echo $tax->labels->name ?></option>
+											<?php endforeach ?>
+											</select>
+										</td>
+									</tr>
+									<tr valign="top">
+										<th scope="row">
+											<label><strong>Auto set tag:</strong><br/>Uses the tags from instagram</label>
+										</th>
+										<td>
+											<input type="checkbox" name="dsgnwrks_insta_options[<?php echo $id; ?>][autotag]" <?php checked( isset( $o['autotag'] ) ); ?> value="yes"/>
+										</td>
+									</tr>
+									<tr valign="top">
+										<th scope="row">
 											<label><strong>Auto set Geolocation</strong><br/></label>
 										</th>
 										<td>
