@@ -198,8 +198,16 @@ class DsgnWrksInstagram {
 	protected function import_messages( $api_url, $settings, $prevmessages = array() ) {
 
 		$this->settings = $settings;
-
-		$api = wp_remote_retrieve_body( wp_remote_get( $api_url ) );
+		
+		$response = wp_remote_get( $api_url, array('sslverify' => !(bool)$settings['ssl_verify_off']) );
+		
+		if (is_wp_error($response)) {
+			echo $response->get_error_message();
+			exit;
+		}
+		
+		$api = wp_remote_retrieve_body( $response );
+		
 		$data = json_decode( $api );
 
 		require_once(ABSPATH . 'wp-admin/includes/file.php');

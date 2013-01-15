@@ -394,6 +394,15 @@ if ( !empty( $users ) && is_array( $users ) ) {
 
 								}
 
+								?><tr valign="top">
+										<th scope="row">
+											<label><strong>Disable SSL-Verification</strong><br/>Only for testing purposes</label>
+										</th>
+										<td>
+											<input type="checkbox" name="dsgnwrks_insta_options[<?php echo $id; ?>][ssl_verify_off]" <?php checked( isset( $o['ssl_verify_off'] ) ); ?> value="yes"/>
+										</td>
+									</tr>
+								<?php
 								echo '<input type="hidden" name="dsgnwrks_insta_options[username]" value="replaceme" />';
 								$userdata = array( 'access_token', 'bio', 'website', 'profile_picture', 'full_name', 'id', 'full_username' ) ;
 								foreach ( $userdata as $data ) {
