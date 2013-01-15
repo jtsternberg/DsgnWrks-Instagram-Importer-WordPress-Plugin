@@ -396,6 +396,14 @@ if ( !empty( $users ) && is_array( $users ) ) {
 
 								?><tr valign="top">
 										<th scope="row">
+											<label><strong>Auto set Geolocation</strong><br/></label>
+										</th>
+										<td>
+											<input type="checkbox" name="dsgnwrks_insta_options[<?php echo $id; ?>][geolocation]" <?php checked( isset( $o['geolocation'] ) ); ?> value="yes"/>
+										</td>
+									</tr>
+									<tr valign="top">
+										<th scope="row">
 											<label><strong>Disable SSL-Verification</strong><br/>Only for testing purposes</label>
 										</th>
 										<td>

@@ -297,6 +297,9 @@ class DsgnWrksInstagram {
 		$settings = ( empty( $settings ) ) ? get_option( 'dsgnwrks_insta_options' ) : $settings;
 
 		$loc = ( isset( $p->location->name ) ) ? $p->location->name : '';
+		$loc_longitude = ( isset( $p->location->longitude ) ) ? $p->location->longitude : '';
+		$loc_latitude = ( isset( $p->location->latitude ) ) ? $p->location->latitude : '';
+		
 
 		$insta_title = !empty( $p->caption->text ) ? $p->caption->text : 'Untitled';
 		$import['post_title'] = $insta_title;
@@ -384,6 +387,14 @@ class DsgnWrksInstagram {
 		update_post_meta( $new_post_id, 'instagram_filter_used', $p->filter );
 		update_post_meta( $new_post_id, 'instagram_location', $p->location );
 		update_post_meta( $new_post_id, 'instagram_link', esc_url( $p->link ) );
+		
+		// Geolocation
+		if (!empty($settings['geolocation'])) {
+			update_post_meta( $new_post_id, 'geo_latitude', $loc_latitude );
+			update_post_meta( $new_post_id, 'geo_longitude', $loc_longitude );
+			update_post_meta( $new_post_id, 'geo_address', $loc );
+			update_post_meta( $new_post_id, 'geo_public', true );
+		}
 
 		return $this->upload_img( $imgurl );
 	}
