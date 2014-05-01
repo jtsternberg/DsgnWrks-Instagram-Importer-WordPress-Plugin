@@ -1042,7 +1042,7 @@ class DsgnWrksInstagram {
 			'instagram_link'              => esc_url( $this->pic->link ),
 			'instagram_embed_code'        => $this->instagram_embed(),
 			'instagram_type'              => esc_url( $this->pic->type ),
-			'instagram_user'              => $this->pic->user,
+			'instagram_user'              => $this->userid,
 		) as $key => $value )
 			update_post_meta( $this->import['post_id'], $key, $value );
 
