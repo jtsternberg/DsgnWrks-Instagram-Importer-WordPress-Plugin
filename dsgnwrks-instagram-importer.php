@@ -668,8 +668,8 @@ class DsgnWrksInstagram extends DsgnWrksInstagram_Debug {
 	 */
 	protected function pic_loop( $data = array() ) {
 
-		// 'Type' to be imported (images/video)
-		$this->settings->all_opts[ $this->settings->userid ]['types'] = (array) apply_filters( 'dsgnwrks_instagram_import_types', array( 'video', 'image' ), $this->settings->userid );
+		// 'Type' to be imported (images/video/carousel)
+		$this->settings->all_opts[ $this->settings->userid ]['types'] = (array) apply_filters( 'dsgnwrks_instagram_import_types', array( 'video', 'image', 'carousel' ), $this->settings->userid );
 
 		// if we have invalid data, bail here
 		if ( !isset( $data->data ) || !is_array( $data->data ) )
