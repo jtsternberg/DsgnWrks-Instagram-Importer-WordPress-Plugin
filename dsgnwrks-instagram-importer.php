@@ -687,7 +687,7 @@ class DsgnWrksInstagram extends DsgnWrksInstagram_Debug {
 	protected function pic_loop( $data = array() ) {
 
 		// 'Type' to be imported (images/video)
-		$this->settings->all_opts[ $this->settings->userid ]['types'] = (array) apply_filters( 'dsgnwrks_instagram_import_types', array( 'video', 'image' ), $this->settings->userid );
+		$this->settings->all_opts[ $this->settings->userid ]['types'] = (array) apply_filters( 'dsgnwrks_instagram_import_types', array( 'video', 'image', 'carousel' ), $this->settings->userid );
 
 		// if we have invalid data, bail here
 		if ( !isset( $data->data ) || !is_array( $data->data ) )
@@ -786,7 +786,8 @@ class DsgnWrksInstagram extends DsgnWrksInstagram_Debug {
 
 		$this->type = 'image';
 		// sideload image
-		$message = $this->upload_media( array( $p->images->thumbnail->url, $p->images->standard_resolution->url ), $p->created_time );
+		$message = $this->upload_media( array( $p->images->thumbnail->url, $p->images->standard_resolution->url ), $p->created_time, '', '', true );
+		
 
 		// sideload videos
 		if ( $this->pic->type == 'video' ) {
@@ -803,6 +804,36 @@ class DsgnWrksInstagram extends DsgnWrksInstagram_Debug {
 				);
 			}
 		}
+		
+		// sideload content from carousels
+		
+		if ( $this->pic->type == 'carousel' ) {
+			$this->type = 'carousel';
+			$is_primary = false;
+			// loop through the carousel and add all images as non-primary images
+			foreach ( $p->carousel_media as $item ) {
+				// upload images unless they were already uploaded 
+				// (if the carousel starts with an image, it will have been captured above)
+				if ($item->type == 'image' && $item->images->thumbnail->url !== $p->images->thumbnail->url) {
+					$message .= $this->upload_media( array( $item->images->thumbnail->url, $item->images->standard_resolution->url ), $p->created_time, '', '', $is_primary );
+				}
+				if ($item->type == 'video') {
+					// grab both video sizes and upload them
+					foreach ( array( 'low_resolution', 'standard_resolution' ) as $size ) {
+						$vid_size = (int) $item->videos->$size->width;
+						$title = sprintf( __( '%s Video', 'dsgnwrks' ), $vid_size .'x'. $vid_size );
+						$message .= $this->upload_media(
+							$item->videos->$size->url,
+							$title . ' ' . $item->created_time,
+							$title,
+							$size,
+							$is_primary
+						);
+					}
+				}
+			}
+		}
+		
 
 		// Update post content with our modified post content that replaces the custom tags.
 		$this->update_post_content();
@@ -1075,80 +1106,71 @@ class DsgnWrksInstagram extends DsgnWrksInstagram_Debug {
 	 * @param  string       $filename     What to name the file. File extension will be added automatically.
 	 * @param  string       $attach_title Optional title for uploaded media attachement
 	 * @param  string       $size         Optional size of media
+	 * @param  boolean      $is_primary   Is this the primary image or part of a carousel?
 	 * @return string                     Error|Success message
 	 */
-	protected function upload_media( $media_url = '', $filename = '', $attach_title = '', $size = '' ) {
-
+	protected function upload_media( $media_url = '', $filename = '', $attach_title = '', $size = '', $is_primary = true ) {
 		// get our import data
 		$import = &$this->import;
 		// image or video?
 		$is_image = is_array( $media_url );
-
 		// bail here if we don't have a media url
 		if ( empty( $media_url ) ) {
 			return $this->upload_error(__LINE__);
 		}
-
 		if ( $this->doing_cron ) {
 			require_once( ABSPATH .'/wp-admin/includes/file.php' );
 			require_once( ABSPATH .'/wp-admin/includes/media.php' );
 			require_once( ABSPATH .'/wp-admin/includes/image.php' );
 		}
-
 		$tmp = $this->download_media_url( $media_url );
-
 		$media_url = is_array( $media_url ) ? $media_url[1] : $media_url;
-
 		// check for file extensions
 		$pattern = $is_image
 			? '/[^\?]+\.(jpe?g|jpe|gif|png)\b/i'
 			: '/[^\?]+\.(mp4|MP4)/';
-
 		preg_match( $pattern, $media_url, $matches );
-
 		$file_array['tmp_name'] = $tmp;
 		$file_array['name']     = $filename
 			? sanitize_title_with_dashes( $filename ) . '.' . $matches[1]
 			: basename( $matches[0] );
-
 		if ( is_wp_error( $tmp ) ) {
 			@unlink( $file_array['tmp_name'] );
 			$file_array['tmp_name'] = '';
 		}
-
 		// post title or custom title
 		$attach_title = $attach_title ? $attach_title : $import['post_title'];
-
 		$attach_id = media_handle_sideload( $file_array, $import['post_id'], $attach_title );
-
 		if ( is_wp_error( $attach_id ) ) {
 			@unlink( $file_array['tmp_name'] );
 			// may return an error if they're on multisite and don't have mp4 enabled
 			return $this->upload_error( __LINE__, $media_url, $attach_id->get_error_message() );
 		}
-
 		if ( ! $is_image ) {
-
 			// Save our video attachement ID's and their urls as post-meta
-			update_post_meta( $import['post_id'], 'instagram_video_id_'. $size, $attach_id );
-			update_post_meta( $import['post_id'], 'instagram_video_url_'. $size, wp_get_attachment_url( $attach_id ) );
-
+			add_post_meta( $import['post_id'], 'instagram_video_id_'. $size, $attach_id );
+			add_post_meta( $import['post_id'], 'instagram_video_url_'. $size, wp_get_attachment_url( $attach_id ) );
 			return '<em> '. sprintf( __( '%s imported.', 'dsgnwrks' ), '<b>'. $attach_title .'</b>' ) .'</em>';
 		} else {
 			// Save our photo attachement ID as post-meta
-			update_post_meta( $import['post_id'], 'instagram_image_id', $attach_id );
-		}
-
-		if ( $import['featured'] ) {
-			set_post_thumbnail( $import['post_id'], $attach_id );
+			add_post_meta( $import['post_id'], 'instagram_image_id', $attach_id );
 		}
 
 		// Get image markup
 		$img_element = $this->get_image_el( $attach_id );
-
-		// Replace URLs in post with uploaded image
-		if ( $img_element ) {
-
+		
+		if ( ! $img_element ) {
+			return $this->upload_error( __LINE__, $media_url );
+		}
+		
+		if ( $is_primary ) {
+		
+			if ( $import['featured'] ) {
+				set_post_thumbnail( $import['post_id'], $attach_id );
+			}
+		
+			// Replace URLs in post with uploaded image
+			
 			/**
 			 * Filters the image element.
 			 *
@@ -1157,17 +1179,17 @@ class DsgnWrksInstagram extends DsgnWrksInstagram_Debug {
 			 * @param int          $post_id     The attachment's parent ID.
 			 */
 			$this->insta_image = (string) apply_filters( 'dsgnwrks_instagram_insta_image', $img_element, $attach_id, $import['post_id'] );
+			
+			$excerpted_title = wp_trim_words( $import['post_title'], 22 );
+			$edit_link       = get_edit_post_link( $import['post_id'] );
+			$trash_link      = get_delete_post_link( $import['post_id'] );
 
+			// return a success message
+			return '<li id="imported-'. $import['post_id'] .'" title="'. esc_attr( sprintf( __( '&ldquo;%s&rdquo;imported and created successfully.', 'dsgnwrks' ), $import['post_title'] ) ) .'">' . dw_get_instagram_image( $import['post_id'], array( 50, 50 ) ) .'<strong><a target="_blank" href="'. esc_url( $edit_link ) .'">&ldquo;'. $excerpted_title .'&rdquo;</a></strong><a title="'. esc_attr__( 'Move to Trash' ) .'" href="'. esc_url( $trash_link ) .'" class="dashicons dashicons-trash"><span class="screen-reader-text">'. esc_html__( 'Move to Trash' ) .'</span></a></li>';
+			
 		} else {
-			return $this->upload_error( __LINE__, $media_url );
+			return $img_element;
 		}
-
-		$excerpted_title = wp_trim_words( $import['post_title'], 22 );
-		$edit_link       = get_edit_post_link( $import['post_id'] );
-		$trash_link      = get_delete_post_link( $import['post_id'] );
-
-		// return a success message
-		return '<li id="imported-'. $import['post_id'] .'" title="'. esc_attr( sprintf( __( '&ldquo;%s&rdquo;imported and created successfully.', 'dsgnwrks' ), $import['post_title'] ) ) .'">' . dw_get_instagram_image( $import['post_id'], array( 50, 50 ) ) .'<strong><a target="_blank" href="'. esc_url( $edit_link ) .'">&ldquo;'. $excerpted_title .'&rdquo;</a></strong><a title="'. esc_attr__( 'Move to Trash' ) .'" href="'. esc_url( $trash_link ) .'" class="dashicons dashicons-trash"><span class="screen-reader-text">'. esc_html__( 'Move to Trash' ) .'</span></a></li>';
 	}
 
 	/**
@@ -1754,3 +1776,4 @@ class DsgnWrksInstagram_Debug {
 		wp_mail( 'justin@dsgnwrks.pro', 'Instagram Debug - '. $title .' - line '. $line, $data );
 	}
 }
+
