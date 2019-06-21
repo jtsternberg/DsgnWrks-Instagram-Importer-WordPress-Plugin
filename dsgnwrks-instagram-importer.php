@@ -802,14 +802,9 @@ class DsgnWrksInstagram extends DsgnWrksInstagram_Debug {
 							break;
 
 						default:
-
-							// Keep from double-importing the first image.
-							if ( $p->images->standard_resolution->url === $img_item->images->standard_resolution->url ) {
-								++$index;
-								break;
-							}
-
-							$sub_items[] = $this->upload_img_media( $img_item, wp_trim_words( $import['post_title'], 5, '...' ) . ' - ' . ++$index );
+							if($index >= 1)
+								$sub_items[] = $this->upload_img_media( $p, wp_trim_words( $import['post_title'], 5, '...' ) . ' - ' . $index, $index );
+							$index++;
 							break;
 					}
 				}
@@ -836,7 +831,7 @@ class DsgnWrksInstagram extends DsgnWrksInstagram_Debug {
 	 * @param  string|array $p     Instagram media object.
 	 * @param  string       $title The optional file/attachment title.
 	 */
-	public function upload_img_media( $p, $title = '' ) {
+	public function upload_img_media( $p, $title = '' , $index = 0) {
 		$attach_title = ! empty( $title )
 			? $title
 			: ( ! empty( $p->created_time ) ? $p->created_time : time() );
@@ -844,7 +839,7 @@ class DsgnWrksInstagram extends DsgnWrksInstagram_Debug {
 		return $this->upload_media(
 			array( $p->images->thumbnail->url, $p->images->standard_resolution->url ),
 			wp_trim_words( $attach_title, 5, '' ),
-			$title
+			$title, '', $index
 		);
 	}
 
@@ -1193,7 +1188,7 @@ class DsgnWrksInstagram extends DsgnWrksInstagram_Debug {
 	 * @param  string       $size         Optional size of media
 	 * @return string                     Error|Success message
 	 */
-	protected function upload_media( $media_url = '', $filename = '', $attach_title = '', $size = '' ) {
+	protected function upload_media( $media_url = '', $filename = '', $attach_title = '', $size = '', $index = 0 ) {
 
 		// get our import data
 		$import = &$this->import;
@@ -1211,7 +1206,7 @@ class DsgnWrksInstagram extends DsgnWrksInstagram_Debug {
 			require_once( ABSPATH .'/wp-admin/includes/image.php' );
 		}
 
-		$tmp = $this->download_media_url( $media_url );
+		$tmp = $this->download_media_url( $media_url , $index);
 
 		$media_url = is_array( $media_url ) ? $media_url[1] : $media_url;
 
@@ -1318,7 +1313,7 @@ class DsgnWrksInstagram extends DsgnWrksInstagram_Debug {
 	 *
 	 * @return mixed                  Results of download_url
 	 */
-	public function download_media_url( $instagram_urls ) {
+	public function download_media_url( $instagram_urls, $index = 0) {
 		if ( ! is_array( $instagram_urls ) ) {
 			return download_url( $instagram_urls );
 		}
@@ -1334,7 +1329,9 @@ class DsgnWrksInstagram extends DsgnWrksInstagram_Debug {
 			$api_url = add_query_arg( '__a', '1', $this->pic->link );
 			$result = json_decode( wp_remote_retrieve_body( wp_remote_get( $api_url ) ) );
 
-			if (
+			if ( !empty( $result->graphql->shortcode_media->edge_sidecar_to_children)) {
+				$tmp = download_url( $result->graphql->shortcode_media->edge_sidecar_to_children->edges[$index]->node->display_url );
+			} else if (
 				! empty( $result->graphql->shortcode_media->display_url )
 				&& $instagram_url != $result->graphql->shortcode_media->display_url
 			) {
